@@ -3,42 +3,42 @@ import java.io.*;
 import java.util.*;
 
 public class Server {
-
-    private ServerSocket ss = null;
+    private DatagramSocket socket;
     public int port;
+    private Set<InetSocketAddress> clients = new HashSet<InetSocketAddress>();
 
-    ArrayList<ClientHandler> handlers = new ArrayList<ClientHandler>();
-
-    public Server(int p) {
+    public Server(int p) throws SocketException {
         port = p;
-        try {
-            ss = new ServerSocket(port);
+        socket = new DatagramSocket(port);
+    }
+
+    public void run() throws IOException {
+        byte[] buf = new byte[2048];
+        System.out.println("UDP server listening on " + port);
+        while (true) {
+            DatagramPacket packet = new DatagramPacket(buf, buf.length);
+            socket.receive(packet);
+            InetSocketAddress sender = new InetSocketAddress(packet.getAddress(), packet.getPort());
+            
+            System.out.println("Got packet from " + sender + " (" + packet.getLength() + " bytes, " + clients.size() + " known clients)");
+            
+            synchronized (clients) { clients.add(sender); }
+
+            byte[] data = new byte[packet.getLength()];
+            System.arraycopy(packet.getData(), 0, data, 0, packet.getLength());
+
+            synchronized (clients) {
+                for (InetSocketAddress c : clients) {
+                    if (!c.equals(sender)) {
+                        DatagramPacket out = new DatagramPacket(data, data.length, c.getAddress(), c.getPort());
+                        socket.send(out);
+                    }
+                }
+            }
         }
-        catch (IOException i) {
-            System.out.println(i);
-        }
     }
 
-    public ServerSocket getSS() {
-        return ss;
-    }
-
-    public synchronized void addHandler(ClientHandler h) {
-        handlers.add(h);
-    }
-
-    public synchronized void removeHandler(ClientHandler h) {
-        handlers.remove(h);
-    }
-
-    public synchronized void broadcast(String data, ClientHandler sender) {
-        for (ClientHandler h : handlers)
-            if (h != sender) h.send(data);
-    }
-
-    public static void main(String[] args) {
-        Server server = new Server(5000);
-        AcceptLoop loop = new AcceptLoop(server);
-        loop.start();
+    public static void main(String[] args) throws Exception {
+        new Server(5000).run();
     }
 }
