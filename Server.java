@@ -2,34 +2,43 @@ import java.net.*;
 import java.io.*;
 import java.util.*;
 
-public class Server{
+public class Server {
 
-    private Socket s = null;
     private ServerSocket ss = null;
-    private DataInputStream in = null;
     public int port;
 
-    ArrayList<Socket> clients = new ArrayList<Socket>();
-    ArrayList<DataInputStream> inputs = new ArrayList<DataInputStream>();
+    ArrayList<ClientHandler> handlers = new ArrayList<ClientHandler>();
 
     public Server(int p) {
         port = p;
-        try{
+        try {
             ss = new ServerSocket(port);
-
-
         }
-        catch(IOException i)
-        {
+        catch (IOException i) {
             System.out.println(i);
         }
     }
-    public ServerSocket getSS(){
-       return ss;
-    }
-    public void addClient(Socket sock, DataInputStream Shoe){
-      clients.add(sock);
-      inputs.add(Shoe);
 
+    public ServerSocket getSS() {
+        return ss;
+    }
+
+    public synchronized void addHandler(ClientHandler h) {
+        handlers.add(h);
+    }
+
+    public synchronized void removeHandler(ClientHandler h) {
+        handlers.remove(h);
+    }
+
+    public synchronized void broadcast(String data, ClientHandler sender) {
+        for (ClientHandler h : handlers)
+            if (h != sender) h.send(data);
+    }
+
+    public static void main(String[] args) {
+        Server server = new Server(5000);
+        AcceptLoop loop = new AcceptLoop(server);
+        loop.start();
     }
 }

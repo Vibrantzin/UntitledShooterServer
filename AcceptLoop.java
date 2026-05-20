@@ -1,27 +1,25 @@
 import java.net.*;
 import java.io.*;
-import java.util.*;
-class AcceptLoop extends Thread{
-  private ServerSocket ss = null;
-  private DataInputStream in = null;
 
-  public void run(Server s){
-    try{
+class AcceptLoop extends Thread {
+    private Server server;
 
-      System.out.println("Waiting for a client ...");
-      while(true){
-        ss = s.getSS();
-        Socket c = ss.accept();
-        System.out.println("Client accepted");
-
-        in = new DataInputStream(
-            new BufferedInputStream(c.getInputStream()));
-        s.addClient(c, in);
-      }
+    public AcceptLoop(Server s) {
+        this.server = s;
     }
-    catch(IOException i){
+
+    public void run() {
+        try {
+            System.out.println("Waiting for a client ...");
+            while (true) {
+                Socket c = server.getSS().accept();
+                System.out.println("Client accepted");
+                DataInputStream in = new DataInputStream(
+                    new BufferedInputStream(c.getInputStream()));
+                server.addClient(c, in);
+            }
+        } catch (IOException i) {
             System.out.println(i);
+        }
     }
-
-  }
 }
